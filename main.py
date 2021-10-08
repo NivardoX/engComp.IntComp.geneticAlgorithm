@@ -3,9 +3,17 @@ import functools
 import datetime
 
 random.seed(datetime.datetime.now())
-MAX = 2^4
-NUMBER_OF_CROMOSSOMES = 6
-GENERATIONS = 10
+MAX = 2^6
+NUMBER_OF_CHROMOSOMES = 20
+NUMBER_OF_GENES = 4
+
+GENERATIONS = 1000
+
+
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
 
 def func1(x, y, z, w):
   return abs(pow(x, 2) + pow(y, 3) + pow(z, 4) - pow(w, 5))
@@ -20,34 +28,50 @@ def func4(x, y, z, w):
   return abs(pow(x, 4) - z + (y * w))
 
 def breed(gene,other_gene):
-  mid = len(gene)//2
-  return f"{gene[:mid]}{other_gene[mid:]}"
+  gene = gene_to_bin(gene)
+  other_gene = gene_to_bin(other_gene)
+
+  mid = len(gene)//random.randint(1,NUMBER_OF_CHROMOSOMES)
+  aux = list(gene[:mid])
+  aux.extend(list(other_gene[mid:]))
+ 
+  return tuple([int(''.join(i), 2) for i in batch(aux,n=8) ])
 
 def gene_to_bin(gene):
-  pass
+  return ''.join(['{0:08b}'.format(i) for i in gene])
 
-def select(cromossomes):
-  print(cromossomes)
+def make_new_generation(old_generation, new_chromosomes):
+  new_generation = old_generation
+  new_generation.extend(new_chromosomes)
+
+  new_generation = list(set(new_generation[:-8]))
+
+  if len(new_generation) < NUMBER_OF_CHROMOSOMES:
+      new_generation.extend(generate_random_chromosomes(qnt=NUMBER_OF_CHROMOSOMES-len(new_generation)))
+
+  return new_generation
+
+
+def select(chromosomes):
+  print(chromosomes)
   errors  = {}
-  for cromossome in cromossomes:
-    error = calculate_error(cromossome)
-    errors[cromossome] = error
-    print(f"\tCROMOSSOME {cromossome} -> ERROR {error}".center(20,' '))
+
+  for chromosome in chromosomes:
+    error = calculate_error(chromosome)
+    errors[chromosome] = error
+    print(f"\tCHROMOSOME {chromosome} -> ERROR {error}".center(20,' '))
 
   errors = list(dict(sorted(errors.items(), key=lambda item: item[1])).keys())
-  print(errors)
-  new_cromossome = breed(errors[0],errors[1])
-  errors.pop(-1)
+  new_chromosomes = [breed(errors[i],errors[i+1]) for i in range(4)]
 
-  new_generation = [error for error in errors]
-  new_generation.append(new_cromossome)
+  new_generation = make_new_generation(chromosomes,new_chromosomes)
   
   print(new_generation)
   return new_generation
 
 @functools.lru_cache(maxsize=None)
-def calculate_error(cromossome):
-  x, y, z, w = [int(gene) for gene in cromossome]
+def calculate_error(chromosome):
+  x, y, z, w = chromosome
 
   error =  func1(x, y, z, w) + func2(x, z, w) + func3(y, z) + func4(x, y, z, w)
 
@@ -55,27 +79,24 @@ def calculate_error(cromossome):
 
   return error
 
-def setVariables(vetor):
-  x = vetor[0]
-  y = vetor[1]
-  z = vetor[2]
-  w = vetor[3]
-
   return x, y, z, w
 
+
+def generate_random_chromosomes(qnt=NUMBER_OF_CHROMOSOMES):
+  return [tuple(random.sample(range(0, 50), NUMBER_OF_GENES)) for i in range(qnt)]
 if __name__ == "__main__":
 
-  cromossomes = ['{0:04b}'.format(i) for i in random.sample(range(0, MAX), NUMBER_OF_CROMOSSOMES)]
+  chromosomes = generate_random_chromosomes()
 
   for generation in range(GENERATIONS):
 
     print(f"GENERATION {generation}".center(20,'='))
-    cromossomes = select(cromossomes)
+    chromosomes = select(chromosomes)
 
-  for final_cromossome in cromossomes:
-    error = calculate_error(final_cromossome)
+  for final_chromosome in chromosomes:
+    error = calculate_error(final_chromosome)
 
-    print(f"\tCROMOSSOME {final_cromossome} -> ERROR {error}".center(20,' '))
+    print(f"\tCHROMOSOME {final_chromosome} -> ERROR {error}".center(20,' '))
 
 
 
